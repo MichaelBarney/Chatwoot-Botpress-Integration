@@ -4,7 +4,7 @@ import { chatwoot } from '.botpress/implementation/channels'
 
 export default new IntegrationDefinition({
   name: integrationName,
-  version: '0.0.5',
+  version: '1.0.1',
   readme: 'hub.md',
   title: 'Chatwoot',
   description: 'Chatwoot Integration for live agent handoff',

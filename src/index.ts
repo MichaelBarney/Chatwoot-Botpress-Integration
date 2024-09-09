@@ -4,6 +4,8 @@ import { log } from 'console'
 import { Integration, RuntimeError } from '@botpress/sdk' // import the RuntimeError class
 
 const axios = require('axios');
+const FormData = require('form-data');
+const fs = require('fs');
 
 export default new bp.Integration({
   register: async ({ webhookUrl, ctx, client}) => {
@@ -169,13 +171,51 @@ export default new bp.Integration({
           await sendToChatwoot(chatwootBody, ctx, conversation, client, user);
         },
         image: async ({ payload, logger, ctx, conversation, client, user }) => {
-          console.log("Image: ", payload)
-          const chatwootBody = {   
-            "content": `> ![](${payload.imageUrl})\n\n> **Texto da imagem**\n\nResposta`,
-            "message_type": "outgoing",
-            "private": false
+          try {
+            console.log("Handling image message:", payload);
+        
+            // Fetch image from the provided URL and create a stream
+            const imageUrl = payload.imageUrl;  // Assuming the image URL is passed in the payload
+            const response = await axios.get(imageUrl, {
+              responseType: 'stream'
+            });
+        
+            // Prepare the form data with the image and other necessary fields
+            const formData = new FormData();
+            formData.append('attachments[]', response.data, {
+              filename: 'image.jpg',  // You can change this based on the image type
+              contentType: response.headers['content-type']
+            });
+            formData.append('message_type', 'outgoing');
+            // formData.append('content', 'Envio de imagem utilizando o link em buffer');
+        
+            // Get the conversation ID and bot token from the client state
+            const { state } = await client.getState({
+              type: 'integration',
+              name: 'configuration',
+              id: ctx.integrationId,
+            });
+        
+            const chatwootConversationId = conversation.tags.chatwootId;
+            const messageEndpoint = `${ctx.configuration.baseUrl}/api/v1/accounts/${ctx.configuration.accountNumber}/conversations/${chatwootConversationId}/messages`;
+        
+            // Make the POST request to Chatwoot
+            const config = {
+              headers: {
+                'api_access_token': state.payload.botToken,
+                ...formData.getHeaders(),  // Add the necessary headers from FormData
+              },
+              maxBodyLength: Infinity, // To handle large image uploads
+            };
+        
+            await axios.post(messageEndpoint, formData, config);
+            console.log("Image sent successfully to Chatwoot");
+        
+          } catch (error) {
+            throw new RuntimeError(
+              `Error sending image to Chatwoot! ${error}`
+            );
           }
-          await sendToChatwoot(chatwootBody, ctx, conversation, client, user);
         },
         video: async ({ payload, logger, ...props }) => {
           console.log("Video: ", payload)
