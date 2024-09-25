@@ -4,3 +4,6 @@ This is a community-made Integration. It was developed by Michael Barney & ProAI
 
 Open-Source Repo:
 https://github.com/MichaelBarney/Chatwoot-Botpress-Integration
+
+### Changelog
+v1.0.2 - Fixed issue with "Send to Agent" action.

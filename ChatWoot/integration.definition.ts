@@ -4,7 +4,7 @@ import { chatwoot } from '.botpress/implementation/channels'
 
 export default new IntegrationDefinition({
   name: integrationName,
-  version: '1.0.1',
+  version: '1.0.2',
   readme: 'hub.md',
   title: 'Chatwoot',
   description: 'Chatwoot Integration for live agent handoff',
@@ -14,7 +14,9 @@ export default new IntegrationDefinition({
       title: 'Send to Agent',
       description: 'Directs the conversation to an agent',
       input: {
-        schema: z.object({}),
+        schema: z.object({
+          conversationId: z.string()
+        }),
       },
       output: {
         schema: z.object({
@@ -26,7 +28,6 @@ export default new IntegrationDefinition({
   events: {},
   configuration: {
     schema: z.object({
-      apiToken: z.string().optional(),
       botToken: z.string().optional(),
       baseUrl: z.string(),
       accountNumber: z.number(),
@@ -34,19 +35,6 @@ export default new IntegrationDefinition({
     }),
   },
   states: {
-    configuration: {
-      type: 'integration',
-      schema: z.object({
-        botToken: z.string().optional(),
-        botId: z.number().optional(),
-      }),
-    },
-    chatwoot: {
-      type: 'user',
-      schema: z.object({
-        conversationId: z.string(),
-      }),
-    }
   },
   channels: {
     chatwoot: {

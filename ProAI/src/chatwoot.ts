@@ -10,9 +10,9 @@ export class Chatwoot {
         console.log("Incoming message: ", message)
             
         const { state } = await client.getState({
-            type: 'integration',
+            type: 'user',
             name: 'chatwoot',
-            id: ctx.integrationId,
+            id: ctx.botUserId,
         })
           
         if(state.payload.conversationId){
