@@ -114,9 +114,44 @@ export default new bp.Integration({
             );
           }
         },
-        video: async ({ payload, logger, ...props }) => {
-          console.log("Video: ", payload)
-          //TODO: Implement Video
+        video: async ({ payload, ctx, conversation }) => {
+          try {
+            console.log("Handling video message:", payload);
+
+            // Fetch video from the provided URL
+            const videoUrl = payload.videoUrl; // Assuming the video URL is passed in the payload
+            const response = await axios.get(videoUrl, {
+              responseType: 'stream',
+            });
+
+            // Prepare the form data with the video stream
+            const formData = new FormData();
+            formData.append('attachments[]', response.data, {
+              filename: payload.fileName || 'video.mp4',  // Use filename from payload if available
+              contentType: response.headers['content-type'],
+            });
+            formData.append('message_type', 'outgoing');
+
+            // Get the Chatwoot conversation ID from conversation tags
+            const chatwootConversationId = conversation.tags.chatwootId;
+            const messageEndpoint = `${ctx.configuration.baseUrl}/api/v1/accounts/${ctx.configuration.accountNumber}/conversations/${chatwootConversationId}/messages`;
+
+            // Make the POST request to Chatwoot
+            const config = {
+              headers: {
+                'api_access_token': ctx.configuration.botToken,
+                ...formData.getHeaders(),  // Add headers from FormData
+              },
+              maxBodyLength: Infinity,  // Handle large files
+            };
+
+            await axios.post(messageEndpoint, formData, config);
+            console.log("Video sent successfully to Chatwoot");
+
+          } catch (error) {
+            console.error(`Error sending video to Chatwoot: ${error}`);
+            throw new RuntimeError(`Error sending video to Chatwoot: ${error}`);
+          }
         },
         location: async ({ payload, logger, ...props }) => {
           console.log("Location: ", payload)
