@@ -97,7 +97,7 @@ export default new bp.Integration({
             throw new RuntimeError(`Error handling dropdown: ${error}`);
           }
         },
-        
+
         choice: async ({ payload, ctx, conversation, client, user }) => {
           console.log("Choice: ", payload)
           const chatwootBody = {
@@ -274,9 +274,41 @@ export default new bp.Integration({
             throw new RuntimeError(`Error sending audio to Chatwoot: ${error}`);
           }
         },
-        markdown: async ({ payload, logger, ...props }) => {
-          console.log("Markdown: ", payload)
-          //TODO: Implement Markdown
+        markdown: async ({ payload, ctx, conversation }) => {
+          try {
+            console.log("Handling Markdown message:", payload);
+
+            // Prepare the message with Markdown content
+            const markdownMessage = {
+              content: payload.text, // Assuming 'text' is in Markdown format
+              message_type: 'outgoing',
+              private: false,
+            };
+
+            // Get the Chatwoot conversation ID from conversation tags
+            const chatwootConversationId = conversation.tags.chatwootId;
+            const messageEndpoint = `${ctx.configuration.baseUrl}/api/v1/accounts/${ctx.configuration.accountNumber}/conversations/${chatwootConversationId}/messages`;
+
+            // Make the POST request to Chatwoot
+            const config = {
+              headers: {
+                'api_access_token': ctx.configuration.botToken,
+                'Content-Type': 'application/json',
+              },
+            };
+
+            await axios.post(messageEndpoint, markdownMessage, config)
+              .then((response) => {
+                console.log("Markdown message sent successfully: ", response.data);
+              })
+              .catch((error) => {
+                console.error("Error sending Markdown message: ", error.response?.data || error.message);
+              });
+
+          } catch (error) {
+            console.error(`Error handling Markdown: ${error}`);
+            throw new RuntimeError(`Error handling Markdown: ${error}`);
+          }
         },
         bloc: async ({ payload, logger, ...props }) => {
           console.log("Block: ", payload)
