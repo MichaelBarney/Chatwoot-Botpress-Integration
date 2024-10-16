@@ -55,9 +55,47 @@ export default new bp.Integration({
           console.log("Card: ", payload)
           //TODO: Implement Card
         },
-        dropdown: async ({ payload, logger, ...props }) => {
-          console.log("Dropdown: ", payload)
-          //TODO: Implement Dropdown
+        dropdown: async ({ payload, ctx, conversation }) => {
+          try {
+            console.log("Handling dropdown menu:", payload);
+
+            // Prepare the message content for the dropdown
+            const dropdownMessage = {
+              content: payload.text,
+              content_type: 'input_select',
+              content_attributes: {
+                items: payload.options.map((option: any) => {
+                  return { title: option.label, value: option.value };
+                }),
+              },
+              message_type: 'outgoing',
+              private: false,
+            };
+
+            // Get the Chatwoot conversation ID from conversation tags
+            const chatwootConversationId = conversation.tags.chatwootId;
+            const messageEndpoint = `${ctx.configuration.baseUrl}/api/v1/accounts/${ctx.configuration.accountNumber}/conversations/${chatwootConversationId}/messages`;
+
+            // Make the POST request to Chatwoot
+            const config = {
+              headers: {
+                'api_access_token': ctx.configuration.botToken,
+                'Content-Type': 'application/json',
+              },
+            };
+
+            await axios.post(messageEndpoint, dropdownMessage, config)
+              .then((response) => {
+                console.log("Dropdown sent successfully: ", response.data);
+              })
+              .catch((error) => {
+                console.error("Error sending dropdown: ", error.response?.data || error.message);
+              });
+
+          } catch (error) {
+            console.error(`Error handling dropdown: ${error}`);
+            throw new RuntimeError(`Error handling dropdown: ${error}`);
+          }
         },
         choice: async ({ payload, ctx, conversation, client, user }) => {
           console.log("Choice: ", payload)
