@@ -310,9 +310,45 @@ export default new bp.Integration({
             throw new RuntimeError(`Error handling Markdown: ${error}`);
           }
         },
-        bloc: async ({ payload, logger, ...props }) => {
-          console.log("Block: ", payload)
-          //TODO: Implement Block
+        bloc: async ({ payload, ctx, conversation }) => {
+          try {
+            console.log("Handling block message:", payload);
+
+            // Prepare the block content, which could include text and media
+            const content = payload.text ? payload.text : '';
+            const attachments = payload.attachments || []; // Assuming there could be attachments like images
+
+            // Build the message to send
+            const blockMessage = {
+              content: content,
+              attachments: attachments,
+              message_type: 'outgoing',
+              private: false,
+            };
+
+            const chatwootConversationId = conversation.tags.chatwootId;
+            const messageEndpoint = `${ctx.configuration.baseUrl}/api/v1/accounts/${ctx.configuration.accountNumber}/conversations/${chatwootConversationId}/messages`;
+
+            // Make the POST request to Chatwoot
+            const config = {
+              headers: {
+                'api_access_token': ctx.configuration.botToken,
+                'Content-Type': 'application/json',
+              },
+            };
+
+            await axios.post(messageEndpoint, blockMessage, config)
+              .then((response) => {
+                console.log("Block message sent successfully: ", response.data);
+              })
+              .catch((error) => {
+                console.error("Error sending block message: ", error.response?.data || error.message);
+              });
+
+          } catch (error) {
+            console.error(`Error handling block: ${error}`);
+            throw new RuntimeError(`Error handling block: ${error}`);
+          }
         },
         text: async ({ payload, ctx, conversation, client, user }) => {
           const messageBody = {
