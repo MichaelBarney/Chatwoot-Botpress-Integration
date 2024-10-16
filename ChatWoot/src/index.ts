@@ -8,16 +8,16 @@ const FormData = require('form-data');
 const fs = require('fs');
 
 export default new bp.Integration({
-  register: async ({}) => {
+  register: async ({ }) => {
   },
   unregister: async ({ }) => {
   },
   actions: {
-    sendToAgent: async ({ctx, client, input} ) => {
+    sendToAgent: async ({ ctx, client, input }) => {
       console.log("Sending to agent")
 
       const conversationId = input.conversationId
-      const {conversation} = await client.getConversation({
+      const { conversation } = await client.getConversation({
         id: conversationId
       })
       const chatwootConversationId = conversation.tags.chatwootId
@@ -27,17 +27,18 @@ export default new bp.Integration({
       const response = await axios.post(endpoint, {
         status: 'open',
       }, {
-        headers: { 
-          'api_access_token': ctx.configuration.botToken, 
+        headers: {
+          'api_access_token': ctx.configuration.botToken,
           'Content-Type': 'application/json'
         },
         maxBodyLength: Infinity
-      }).then((response:any) => {
+      }).then((response: any) => {
         console.log("Response For Send To Agent: ", response.data);
-      }).catch((error:any) => {
+      }).catch((error: any) => {
         throw new RuntimeError(
-        `Error sending message to Chatwoot! ${error}`
-      )}
+          `Error sending message to Chatwoot! ${error}`
+        )
+      }
       )
 
       return { currentStatus: 'open' };
@@ -58,30 +59,30 @@ export default new bp.Integration({
           console.log("Dropdown: ", payload)
           //TODO: Implement Dropdown
         },
-        choice: async ({ payload, ctx, conversation, client, user}) => {
+        choice: async ({ payload, ctx, conversation, client, user }) => {
           console.log("Choice: ", payload)
           const chatwootBody = {
             "content": payload.text,
             "content_type": "input_select",
             "content_attributes": {
-              "items": payload.options.map((option:any) => {
+              "items": payload.options.map((option: any) => {
                 return { "title": option.label, "value": option.value }
               })
             },
-            "private":false
+            "private": false
           }
           await sendToChatwoot(chatwootBody, ctx, conversation);
         },
         image: async ({ payload, logger, ctx, conversation, client, user }) => {
           try {
             console.log("Handling image message:", payload);
-        
+
             // Fetch image from the provided URL and create a stream
             const imageUrl = payload.imageUrl;  // Assuming the image URL is passed in the payload
             const response = await axios.get(imageUrl, {
               responseType: 'stream'
             });
-        
+
             // Prepare the form data with the image and other necessary fields
             const formData = new FormData();
             formData.append('attachments[]', response.data, {
@@ -90,11 +91,11 @@ export default new bp.Integration({
             });
             formData.append('message_type', 'outgoing');
             // formData.append('content', 'Envio de imagem utilizando o link em buffer');
-        
+
             // Get the conversation ID and bot token from the client state
             const chatwootConversationId = conversation.tags.chatwootId;
             const messageEndpoint = `${ctx.configuration.baseUrl}/api/v1/accounts/${ctx.configuration.accountNumber}/conversations/${chatwootConversationId}/messages`;
-        
+
             // Make the POST request to Chatwoot
             const config = {
               headers: {
@@ -103,10 +104,10 @@ export default new bp.Integration({
               },
               maxBodyLength: Infinity, // To handle large image uploads
             };
-        
+
             await axios.post(messageEndpoint, formData, config);
             console.log("Image sent successfully to Chatwoot");
-        
+
           } catch (error) {
             throw new RuntimeError(
               `Error sending image to Chatwoot! ${error}`
@@ -121,9 +122,44 @@ export default new bp.Integration({
           console.log("Location: ", payload)
           //TODO: Implement Location
         },
-        file: async ({ payload, logger, ...props }) => {
-          console.log("File: ", payload)
-          //TODO: Implement File
+        file: async ({ payload, logger, ctx, conversation }) => {
+          try {
+            console.log("Handling file message:", payload);
+
+            // Fetch file from the provided URL
+            const fileUrl = payload.fileUrl;  // Assuming the file URL is passed in the payload
+            const response = await axios.get(fileUrl, {
+              responseType: 'stream',
+            });
+
+            // Prepare the form data with the file stream
+            const formData = new FormData();
+            formData.append('attachments[]', response.data, {
+              filename: payload.fileName || 'file',  // Use filename from payload if available
+              contentType: response.headers['content-type'],
+            });
+            formData.append('message_type', 'outgoing');
+
+            // Get the Chatwoot conversation ID from conversation tags
+            const chatwootConversationId = conversation.tags.chatwootId;
+            const messageEndpoint = `${ctx.configuration.baseUrl}/api/v1/accounts/${ctx.configuration.accountNumber}/conversations/${chatwootConversationId}/messages`;
+
+            // Make the POST request to Chatwoot
+            const config = {
+              headers: {
+                'api_access_token': ctx.configuration.botToken,
+                ...formData.getHeaders(),  // Add headers from FormData
+              },
+              maxBodyLength: Infinity,  // Handle large files
+            };
+
+            await axios.post(messageEndpoint, formData, config);
+            console.log("File sent successfully to Chatwoot");
+
+          } catch (error) {
+            logger.error(`Error sending file to Chatwoot: ${error}`);
+            throw new RuntimeError(`Error sending file to Chatwoot: ${error}`);
+          }
         },
         audio: async ({ payload, logger, ...props }) => {
           console.log("Audio: ", payload)
@@ -137,7 +173,7 @@ export default new bp.Integration({
           console.log("Block: ", payload)
           //TODO: Implement Block
         },
-        text: async ({ payload, ctx, conversation, client, user}) => {
+        text: async ({ payload, ctx, conversation, client, user }) => {
           const messageBody = {
             content: payload.text,
             message_type: 'outgoing',
@@ -161,7 +197,7 @@ export default new bp.Integration({
       }
     }
 
-    if (data.conversation.status == 'open'){
+    if (data.conversation.status == 'open') {
       return {
         status: 200,
         body: "Conversation is open",
@@ -209,24 +245,25 @@ export default new bp.Integration({
   },
 })
 
-const sendToChatwoot = async (messageBody:any, ctx:any , conversation:any) => {
+const sendToChatwoot = async (messageBody: any, ctx: any, conversation: any) => {
   console.log("Sending message to Chatwoot")
   console.log("Conversation: ", conversation)
 
   console.log("Message Body: ", messageBody)
 
   const messageEndpoint = `${ctx.configuration.baseUrl}/api/v1/accounts/${ctx.configuration.accountNumber}/conversations/${conversation.tags.chatwootId}/messages`
-    console.log("Message Endpoint: ", messageEndpoint)
-    await axios.post(messageEndpoint, messageBody, {
-      headers: { 
-        'api_access_token': ctx.configuration.botToken, 
-        'Content-Type': 'application/json'
-      },
-      maxBodyLength: Infinity
-    }).then((response:any) => {
-      console.log("Response For Sending Message: ", response.data);
-    }).catch((error:any) => {
-      throw new RuntimeError(
+  console.log("Message Endpoint: ", messageEndpoint)
+  await axios.post(messageEndpoint, messageBody, {
+    headers: {
+      'api_access_token': ctx.configuration.botToken,
+      'Content-Type': 'application/json'
+    },
+    maxBodyLength: Infinity
+  }).then((response: any) => {
+    console.log("Response For Sending Message: ", response.data);
+  }).catch((error: any) => {
+    throw new RuntimeError(
       `Error sending message to Chatwoot! ${error}`
-    )});
+    )
+  });
 }

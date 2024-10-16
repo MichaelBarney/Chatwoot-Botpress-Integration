@@ -10,8 +10,9 @@
   "private": true,
   "dependencies": {
     "@botpress/client": "0.29.2",
-    "@botpress/sdk": "0.10.13",
-    "axios": "^1.7.7"
+    "@botpress/sdk": "1.0.0",
+    "axios": "^1.7.7",
+    "form-data": "^4.0.1"
   },
   "devDependencies": {
     "@botpress/cli": "^0.8.62",
