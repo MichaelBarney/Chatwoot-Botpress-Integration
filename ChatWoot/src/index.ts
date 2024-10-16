@@ -196,9 +196,44 @@ export default new bp.Integration({
             throw new RuntimeError(`Error sending file to Chatwoot: ${error}`);
           }
         },
-        audio: async ({ payload, logger, ...props }) => {
-          console.log("Audio: ", payload)
-          //TODO: Implement Audio
+        audio: async ({ payload, ctx, conversation }) => {
+          try {
+            console.log("Handling audio message:", payload);
+
+            // Fetch audio from the provided URL
+            const audioUrl = payload.audioUrl; // Assuming the audio URL is passed in the payload
+            const response = await axios.get(audioUrl, {
+              responseType: 'stream',
+            });
+
+            // Prepare the form data with the audio stream
+            const formData = new FormData();
+            formData.append('attachments[]', response.data, {
+              filename: payload.fileName || 'audio.mp3',  // Use filename from payload if available
+              contentType: response.headers['content-type'],
+            });
+            formData.append('message_type', 'outgoing');
+
+            // Get the Chatwoot conversation ID from conversation tags
+            const chatwootConversationId = conversation.tags.chatwootId;
+            const messageEndpoint = `${ctx.configuration.baseUrl}/api/v1/accounts/${ctx.configuration.accountNumber}/conversations/${chatwootConversationId}/messages`;
+
+            // Make the POST request to Chatwoot
+            const config = {
+              headers: {
+                'api_access_token': ctx.configuration.botToken,
+                ...formData.getHeaders(),  // Add headers from FormData
+              },
+              maxBodyLength: Infinity,  // Handle large files
+            };
+
+            await axios.post(messageEndpoint, formData, config);
+            console.log("Audio sent successfully to Chatwoot");
+
+          } catch (error) {
+            console.error(`Error sending audio to Chatwoot: ${error}`);
+            throw new RuntimeError(`Error sending audio to Chatwoot: ${error}`);
+          }
         },
         markdown: async ({ payload, logger, ...props }) => {
           console.log("Markdown: ", payload)
