@@ -97,6 +97,7 @@ export default new bp.Integration({
             throw new RuntimeError(`Error handling dropdown: ${error}`);
           }
         },
+        
         choice: async ({ payload, ctx, conversation, client, user }) => {
           console.log("Choice: ", payload)
           const chatwootBody = {
