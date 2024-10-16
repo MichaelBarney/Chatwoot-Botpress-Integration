@@ -1,6 +1,6 @@
 {
   "name": "chatwoot",
-  "integrationName": "chatwoot",
+  "integrationName": "hospitalsantamaria/chatwoot",
   "scripts": {
     "check:type": "tsc --noEmit",
     "login": "bp login",
